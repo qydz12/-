@@ -1,7 +1,7 @@
 # PySide6 科技风车辆实时监测系统（按照效果图设计）
 # 文件名：vehicle_monitor_pro.py
 
-a = 2
+a = 6
 
 import sys
 import cv2
