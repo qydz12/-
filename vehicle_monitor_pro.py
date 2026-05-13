@@ -1,6 +1,8 @@
 # PySide6 科技风车辆实时监测系统（按照效果图设计）
 # 文件名：vehicle_monitor_pro.py
 
+a = 2
+
 import sys
 import cv2
 from ultralytics import YOLO
@@ -99,7 +101,7 @@ class VehicleMonitor(QWidget):
         self.top_frame.setLayout(top_layout)
 
         # ============================
-        # 视频区域
+        # 视频区域·
         # ============================
         self.video_frame = QFrame()
 
