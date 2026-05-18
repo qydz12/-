@@ -1,0 +1,2 @@
+###库
+pip install openai python-dotenv playwright
