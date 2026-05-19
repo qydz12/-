@@ -267,4 +267,7 @@ def run_news_agent(topic):
             }
         ]
     )
-    return response.choices[0].message.content
+    return {
+    "analysis": response.choices[0].message.content,
+    "news": news_results
+}

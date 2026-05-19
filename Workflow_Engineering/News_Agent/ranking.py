@@ -41,6 +41,47 @@
 #     return score
 
 ###升级版
+# def calculate_news_score(news, topic):
+
+#     score = 0
+
+#     title = news.get("title", "").lower()
+
+#     content = news.get("content", "").lower()
+
+#     url = news.get("url", "").lower()
+
+#     # 主题关键词加分
+#     if topic.lower() in title:
+#         score += 20
+
+#     if topic.lower() in content:
+#         score += 10
+
+#     # 来源可信度
+#     trusted_sources = [
+#         "reuters",
+#         "bbc",
+#         "cnn",
+#         "apnews",
+#         "nytimes",
+#         "theguardian"
+#     ]
+
+#     for source in trusted_sources:
+
+#         if source in url:
+#             score += 15
+
+#     # Tavily原始相关性
+#     score += int(news.get("score", 0) * 10)
+
+#     return score
+
+
+###升级版v2.0
+from datetime import datetime
+
 def calculate_news_score(news, topic):
 
     score = 0
@@ -49,31 +90,42 @@ def calculate_news_score(news, topic):
 
     content = news.get("content", "").lower()
 
-    url = news.get("url", "").lower()
-
-    # 主题关键词加分
+    # 主题相关
     if topic.lower() in title:
         score += 20
 
     if topic.lower() in content:
         score += 10
 
-    # 来源可信度
-    trusted_sources = [
-        "reuters",
-        "bbc",
-        "cnn",
-        "apnews",
-        "nytimes",
-        "theguardian"
-    ]
+    # 时间加分
+    published_date = news.get("published_date")
 
-    for source in trusted_sources:
+    if published_date:
 
-        if source in url:
-            score += 15
+        try:
 
-    # Tavily原始相关性
+            news_time = datetime.fromisoformat(
+                published_date.replace("Z", "")
+            )
+
+            days_old = (
+                datetime.utcnow() - news_time
+            ).days
+
+            # 越新分越高
+            if days_old <= 1:
+                score += 30
+
+            elif days_old <= 3:
+                score += 20
+
+            elif days_old <= 7:
+                score += 10
+
+        except:
+            pass
+
+    # Tavily原始分数
     score += int(news.get("score", 0) * 10)
 
     return score
