@@ -1,149 +1,232 @@
 import streamlit as st
-###CSS样式
-st.markdown(
-    """
-    <style>
-
-    .main {
-        background-color: #0E1117;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 from agent import run_news_agent
+from ui.styles import load_css
+from ui.sidebar import render_sidebar
+from ui.header import render_header
+from ui.metrics import render_metrics
+from ui.analysis_panel import render_analysis
+from ui.news_panel import render_news_panel
+from ui.right_panel import render_right_panel
 
-st.title("AI 新闻情报分析系统")
+load_css()
+# =========================================
+# 页面配置
+# =========================================
+st.set_page_config(
+    page_title="AI Intelligence Hub",
+    page_icon="🧠",
+    layout="wide"
+)
+load_css()
 
-with st.sidebar:
 
-    st.title("新闻Agent")
 
-    topic = st.text_input(
-        "请输入新闻主题"
-    )
+config = render_sidebar()
+render_header()
 
-    max_news = st.slider(
-        "新闻数量",
-        5,
-        20,
-        10
-    )
+topic = config["topic"]
 
-# if st.button("开始分析"):
+max_news = config["max_news"]
 
-#     col1, col2 = st.columns(2)
+trusted_only = config["trusted_only"]
 
-#     with col1:
+analysis_mode = config["analysis_mode"]
 
-#         st.metric(
-#             "新闻数量",
-#             len(news_results)
-#         )
+analyze_btn = config["analyze_btn"]
 
-#     with col2:
+time_range = config["time_range"]
 
-#         st.metric(
-#             "可信来源",
-#             5
-#         )
 
-#     with st.spinner("正在分析最新新闻..."):
 
-#         result = run_news_agent(topic)
+# =========================================
+# 主逻辑
+# =========================================
+if analyze_btn:
 
-#         analysis = result["analysis"]
+    if not topic:
 
-#         news_results = result["news"]
+        st.warning("请输入新闻主题")
 
-#     tab1, tab2 = st.tabs([
-#     "AI分析",
-#     "原始新闻"
-#     ])
+    else:
 
-#     with tab1:
+        # =====================================
+        # 进度
+        # =====================================
+        progress_placeholder = st.empty()
 
-#         st.markdown(analysis)
+        status_placeholder = st.empty()
 
-#     with tab2:
+        progress = progress_placeholder.progress(0)
 
-#         for news in news_results:
+        status_placeholder.info("正在连接新闻搜索引擎...")
 
-#             with st.container():
+        progress.progress(20)
 
-#                 st.subheader(
-#                     news.get("title", "无标题")
-#                 )
+        status_placeholder.info("正在抓取最新新闻...")
 
-#                 st.write(
-#                     news.get("content", "")
-#                 )
+        progress.progress(40)
 
-#                 if news.get("url"):
+        status_placeholder.info("正在过滤低可信内容...")
 
-#                     st.link_button(
-#                         "查看原文",
-#                         news["url"]
-#                     )
+        progress.progress(60)
 
-#                 st.divider()
+        status_placeholder.info("正在进行AI分析...")
 
-if st.button("开始分析"):
+        progress.progress(80)
 
-    with st.spinner("正在分析最新新闻..."):
+        # =====================================
+        # Agent
+        # =====================================
+        result = run_news_agent(
+            topic
+        )
 
-        result = run_news_agent(topic)
+        progress.progress(100)
 
-        analysis = result["analysis"]
+        progress_placeholder.empty()
 
+        status_placeholder.empty()
+
+        # =====================================
+        # 数据
+        # =====================================
         news_results = result["news"]
 
-    col1, col2 = st.columns(2)
+        # =====================================
+        # 来源可信度过滤
+        # =====================================
 
-    with col1:
+        trusted_domains = [
 
-        st.metric(
-            "新闻数量",
-            len(news_results)
-        )
+            "reuters.com",
+            "bbc.com",
+            "bloomberg.com",
+            "cnn.com",
+            "nytimes.com",
+            "forbes.com",
+            "techcrunch.com",
+            "theverge.com",
+            "wired.com"
+        ]
 
-    with col2:
+        filtered_news = []
+        trusted_news = []
+        # 开启可信来源过滤
+        if trusted_only:
 
-        st.metric(
-            "可信来源",
-            5
-        )
+            for news in news_results:
 
-    tab1, tab2 = st.tabs([
-        "AI分析",
-        "原始新闻"
-    ])
+                url = news.get(
+                    "url",
+                    ""
+                ).lower()
 
-    with tab1:
+                for domain in trusted_domains:
 
-        st.markdown(analysis)
+                    if domain in url:
 
-    with tab2:
+                        filtered_news.append(news)
+                        trusted_news.append(news)
+                        break
 
-        for news in news_results:
+        # 未开启过滤
+        else:
 
-            with st.container():
+            filtered_news = news_results
 
-                st.subheader(
-                    news.get("title", "无标题")
-                )
+            # 计算所有新闻中的可信来源数量
+            for news in news_results:
 
-                st.write(
-                    news.get("content", "")
-                )
+                url = news.get(
+                    "url",
+                    ""
+                ).lower()
 
-                if news.get("url"):
+                for domain in trusted_domains:
 
-                    st.link_button(
-                        "查看原文",
-                        news["url"]
-                    )
+                    if domain in url:
 
-                st.divider()
+                        trusted_news.append(news)
+                        break
+
+        # =====================================
+        # 防止过滤后为空
+        # =====================================
+
+        if len(filtered_news) == 0:
+
+            filtered_news = news_results
+
+        # =====================================
+        # 热点实体提取
+        # =====================================
+        companies = []
+
+        keywords = [
+            "OpenAI",
+            "微软",
+            "谷歌",
+            "Meta",
+            "英伟达",
+            "DeepSeek",
+            "腾讯",
+            "阿里"
+        ]
+
+        for news in filtered_news:
+
+            text = (
+                news.get("title", "") +
+                news.get("content", "")
+            )
+
+            for k in keywords:
+
+                if k in text and k not in companies:
+
+                    companies.append(k)
+
+        # =====================================
+        # 主布局
+        # =====================================
+        left, center, right = st.columns([
+            0.2,
+            2.3,
+            1
+        ])
+
+        # =====================================
+        # 中间区域
+        # =====================================
+        with center:
+            
+            render_metrics(
+                len(filtered_news),
+                len(trusted_news),
+                analysis_mode
+            )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # =================================
+            # Tabs
+            # =================================
+
+
+            tab1, tab2 = st.tabs([
+                "🧠 AI情报分析",
+                "📰 新闻流"
+            ])
+
+            with tab1:
+                render_analysis(result)
+
+            with tab2:
+                render_news_panel(filtered_news)
+
+        with right:
+            render_right_panel(
+                topic,
+                companies,
+                time_range
+            )
